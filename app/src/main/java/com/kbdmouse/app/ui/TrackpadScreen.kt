@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import com.kbdmouse.app.MainViewModel
 import com.kbdmouse.app.net.BtnState
 import com.kbdmouse.app.net.MouseBtn
+import kotlin.math.abs
 import kotlin.math.roundToInt
 
 @Composable
@@ -59,6 +60,8 @@ fun TrackpadScreen(
                     awaitEachGesture {
                         var lastCentroid: Offset? = null
                         var prevCount = 0
+                        var downFingers = 0
+                        var moved = false
                         var accX = 0f
                         var accY = 0f
                         var scrollX = 0f
@@ -69,10 +72,16 @@ fun TrackpadScreen(
                             val pressed = event.changes.filter { it.pressed }
                             val count = pressed.size
 
+                            if (prevCount == 0 && count > 0) {
+                                downFingers = count
+                                moved = false
+                            }
+
                             when (count) {
                                 1 -> {
                                     val delta = pressed[0].position - pressed[0].previousPosition
                                     if (delta != Offset.Zero) {
+                                        if (abs(delta.x) + abs(delta.y) > MOVE_THRESHOLD) moved = true
                                         accX += delta.x
                                         accY += delta.y
                                         val ix = accX.roundToInt()
@@ -90,8 +99,11 @@ fun TrackpadScreen(
                                         .reduce(Offset::plus) / 2f
                                     val prev = lastCentroid
                                     if (prev != null) {
-                                        scrollX += (centroid.x - prev.x) * currentScroll
-                                        scrollY += (centroid.y - prev.y) * currentScroll
+                                        val dx = centroid.x - prev.x
+                                        val dy = centroid.y - prev.y
+                                        if (abs(dx) + abs(dy) > MOVE_THRESHOLD) moved = true
+                                        scrollX += dx * currentScroll
+                                        scrollY += dy * currentScroll
                                         val sx = scrollX.roundToInt()
                                         val sy = scrollY.roundToInt()
                                         if (sx != 0 || sy != 0) {
@@ -106,6 +118,15 @@ fun TrackpadScreen(
                             }
 
                             if (count == 0 && prevCount > 0) {
+                                if (!moved) {
+                                    if (downFingers >= 2) {
+                                        vm.mouseBtn(MouseBtn.RIGHT, BtnState.DOWN)
+                                        vm.mouseBtn(MouseBtn.RIGHT, BtnState.UP)
+                                    } else {
+                                        vm.mouseBtn(MouseBtn.LEFT, BtnState.DOWN)
+                                        vm.mouseBtn(MouseBtn.LEFT, BtnState.UP)
+                                    }
+                                }
                                 accX = 0f
                                 accY = 0f
                                 scrollX = 0f
@@ -120,7 +141,7 @@ fun TrackpadScreen(
         ) {
             Text(
                 if (connected) {
-                    "Arrastrá para mover · 2 dedos = scroll\nClics solo con los botones"
+                    "Arrastrá = mover · Tap = clic izq\n2 dedos: tap = clic der · arrastre = scroll"
                 } else {
                     "Conectate al servidor para usar el trackpad"
                 },
@@ -169,4 +190,6 @@ private fun MouseButton(
         }
     }
 }
+
+private const val MOVE_THRESHOLD = 12f
 
