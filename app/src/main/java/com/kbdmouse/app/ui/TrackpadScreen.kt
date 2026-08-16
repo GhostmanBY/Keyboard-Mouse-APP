@@ -1,6 +1,5 @@
 package com.kbdmouse.app.ui
 
-import android.os.SystemClock
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -32,7 +31,6 @@ import androidx.compose.ui.unit.dp
 import com.kbdmouse.app.MainViewModel
 import com.kbdmouse.app.net.BtnState
 import com.kbdmouse.app.net.MouseBtn
-import kotlin.math.abs
 import kotlin.math.roundToInt
 
 @Composable
@@ -59,8 +57,6 @@ fun TrackpadScreen(
                 .pointerInput(connected) {
                     if (!connected) return@pointerInput
                     awaitEachGesture {
-                        var moved = false
-                        var downTime = 0L
                         var lastCentroid: Offset? = null
                         var prevCount = 0
                         var accX = 0f
@@ -73,15 +69,10 @@ fun TrackpadScreen(
                             val pressed = event.changes.filter { it.pressed }
                             val count = pressed.size
 
-                            if (prevCount == 0 && count == 1) {
-                                downTime = SystemClock.uptimeMillis()
-                            }
-
                             when (count) {
                                 1 -> {
                                     val delta = pressed[0].position - pressed[0].previousPosition
                                     if (delta != Offset.Zero) {
-                                        if (abs(delta.x) + abs(delta.y) > MOVE_THRESHOLD) moved = true
                                         accX += delta.x
                                         accY += delta.y
                                         val ix = accX.roundToInt()
@@ -98,9 +89,9 @@ fun TrackpadScreen(
                                     val centroid = pressed.map { it.position }
                                         .reduce(Offset::plus) / 2f
                                     val prev = lastCentroid
-                                if (prev != null) {
-                                    scrollX += (centroid.x - prev.x) * currentScroll
-                                    scrollY += (centroid.y - prev.y) * currentScroll
+                                    if (prev != null) {
+                                        scrollX += (centroid.x - prev.x) * currentScroll
+                                        scrollY += (centroid.y - prev.y) * currentScroll
                                         val sx = scrollX.roundToInt()
                                         val sy = scrollY.roundToInt()
                                         if (sx != 0 || sy != 0) {
@@ -115,17 +106,6 @@ fun TrackpadScreen(
                             }
 
                             if (count == 0 && prevCount > 0) {
-                                if (!moved) {
-                                    val dt = SystemClock.uptimeMillis() - downTime
-                                    if (dt >= LONG_PRESS_MS) {
-                                        vm.mouseBtn(MouseBtn.RIGHT, BtnState.DOWN)
-                                        vm.mouseBtn(MouseBtn.RIGHT, BtnState.UP)
-                                    } else {
-                                        vm.mouseBtn(MouseBtn.LEFT, BtnState.DOWN)
-                                        vm.mouseBtn(MouseBtn.LEFT, BtnState.UP)
-                                    }
-                                }
-                                moved = false
                                 accX = 0f
                                 accY = 0f
                                 scrollX = 0f
@@ -140,7 +120,7 @@ fun TrackpadScreen(
         ) {
             Text(
                 if (connected) {
-                    "Arrastrá para mover · Tap = clic izq\nMantener = clic der · 2 dedos = scroll"
+                    "Arrastrá para mover · 2 dedos = scroll\nClics solo con los botones"
                 } else {
                     "Conectate al servidor para usar el trackpad"
                 },
@@ -190,5 +170,3 @@ private fun MouseButton(
     }
 }
 
-private const val MOVE_THRESHOLD = 12f
-private const val LONG_PRESS_MS = 500L
