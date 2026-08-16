@@ -60,7 +60,6 @@ fun TrackpadScreen(
                     awaitEachGesture {
                         var lastCentroid: Offset? = null
                         var prevCount = 0
-                        var downFingers = 0
                         var moved = false
                         var accX = 0f
                         var accY = 0f
@@ -73,7 +72,6 @@ fun TrackpadScreen(
                             val count = pressed.size
 
                             if (prevCount == 0 && count > 0) {
-                                downFingers = count
                                 moved = false
                             }
 
@@ -119,13 +117,8 @@ fun TrackpadScreen(
 
                             if (count == 0 && prevCount > 0) {
                                 if (!moved) {
-                                    if (downFingers >= 2) {
-                                        vm.mouseBtn(MouseBtn.RIGHT, BtnState.DOWN)
-                                        vm.mouseBtn(MouseBtn.RIGHT, BtnState.UP)
-                                    } else {
-                                        vm.mouseBtn(MouseBtn.LEFT, BtnState.DOWN)
-                                        vm.mouseBtn(MouseBtn.LEFT, BtnState.UP)
-                                    }
+                                    vm.mouseBtn(MouseBtn.LEFT, BtnState.DOWN)
+                                    vm.mouseBtn(MouseBtn.LEFT, BtnState.UP)
                                 }
                                 accX = 0f
                                 accY = 0f
@@ -141,7 +134,7 @@ fun TrackpadScreen(
         ) {
             Text(
                 if (connected) {
-                    "Arrastrá = mover · Tap = clic izq\n2 dedos: tap = clic der · arrastre = scroll"
+                    "Arrastrá = mover · Tap = clic izq\n2 dedos = scroll"
                 } else {
                     "Conectate al servidor para usar el trackpad"
                 },
